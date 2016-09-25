@@ -1,0 +1,15 @@
+#!/bin/bash
+./forward
+sleep 1
+./stop
+./back
+sleep 1
+./stop
+sleep 0.1
+./turnl
+sleep 1
+./stop
+sleep 0.1
+./turnr
+sleep 1
+./stop
