@@ -5,31 +5,46 @@ import atexit
 import sys
 
 class Robot(object):
-    def __init__(self, addr=0x60, left_id=1, right_id=2, left_trim=0, right_trim=0,
-                 stop_at_exit=True):
+    def __init__(self, addr=0x60, front_left_id=1, front_right_id=2, front_left_trim=0, front_right_trim=0,
+                  rear_left_id=3, rear_right_id=4, rear_left_trim=0, rear_right_trim=0, stop_at_exit=True):
 
         """Create an instance of the robot.  Can specify the following optional
         parameters:
          - addr: The I2C address of the motor HAT, default is 0x60.
-         - left_id: The ID of the left motor, default is 1.
-         - right_id: The ID of the right motor, default is 2.
-         - left_trim: Amount to offset the speed of the left motor, can be positive
+         - front_left_id: The ID of the left motor, default is 1.
+         - front_right_id: The ID of the right motor, default is 2.
+         - front_left_trim: Amount to offset the speed of the left motor, can be positive
                       or negative and use useful for matching the speed of both
                       motors.  Default is 0.
-         - right_trim: Amount to offset the speed of the right motor (see above).
+         - front_right_trim: Amount to offset the speed of the right motor (see above).
+         - rear_left_id: The ID of the left motor, default is 3.
+         - rear_right_id: The ID of the right motor, default is 4.
+         - rear_left_trim: Amount to offset the speed of the left motor, can be positive
+                      or negative and use useful for matching the speed of both
+                      motors.  Default is 0.
+         - rear_right_trim: Amount to offset the speed of the right motor (see above).
          - stop_at_exit: Boolean to indicate if the motors should stop on program
                          exit.  Default is True (highly recommended to keep this
                          value to prevent damage to the bot on program crash!).
         """
         # Initialize motor HAT and left, right motor.
         self._mh = Adafruit_MotorHAT(addr)
-        self._left = self._mh.getMotor(left_id)
-        self._right = self._mh.getMotor(right_id)
-        self._left_trim = left_trim
-        self._right_trim = right_trim
+        self._front_left = self._mh.getMotor(front_left_id)
+        self._front_right = self._mh.getMotor(front_right_id)
+        self._front_left_trim = front_left_trim
+        self._front_right_trim = front_right_trim
+        self._rear_left = self._mh.getMotor(rear_left_id)
+        self._rear_right = self._mh.getMotor(rear_right_id)
+        self._rear_left_trim = rear_left_trim
+        self._rear_right_trim = rear_right_trim
+        self._left_motors = [self._front_left, self._rear_left]
+        self._right_motors = [self._front_right, self._rear_right]
+        self._motors = [self._front_left, self._front_right, self._rear_left, self._rear_right]
         # Start with motors turned off.
-        self._left.run(Adafruit_MotorHAT.RELEASE)
-        self._right.run(Adafruit_MotorHAT.RELEASE)
+        self._front_left.run(Adafruit_MotorHAT.RELEASE)
+        self._front_right.run(Adafruit_MotorHAT.RELEASE)
+        self._rear_left.run(Adafruit_MotorHAT.RELEASE)
+        self._rear_right.run(Adafruit_MotorHAT.RELEASE)
         # Configure all motors to stop at program exit if desired.
         if stop_at_exit:
             atexit.register(self.stop)
@@ -38,22 +53,29 @@ class Robot(object):
         """Set the speed of the left motor, taking into account its trim offset.
         """
         assert 0 <= speed <= 255, 'Speed must be a value between 0 to 255 inclusive!'
-        speed += self._left_trim
-        speed = max(0, min(255, speed))  # Constrain speed to 0-255 after trimming.
-        self._left.setSpeed(speed)
+        front_speed = speed + self._front_left_trim
+        rear_speed = speed + self._rear_left_trim
+        front_speed = max(0, min(255, speed))  # Constrain speed to 0-255 after trimming.
+        rear_speed = max(0, min(255, speed))  # Constrain speed to 0-255 after trimming.
+        self._front_left.setSpeed(front_speed)
+        self._rear_left.setSpeed(rear_speed)
 
     def _right_speed(self, speed):
         """Set the speed of the right motor, taking into account its trim offset.
         """
         assert 0 <= speed <= 255, 'Speed must be a value between 0 to 255 inclusive!'
-        speed += self._right_trim
-        speed = max(0, min(255, speed))  # Constrain speed to 0-255 after trimming.
-        self._right.setSpeed(speed)
+        front_speed = speed + self._front_right_trim
+        rear_speed = speed + self._rear_right_trim
+        front_speed = max(0, min(255, speed))  # Constrain speed to 0-255 after trimming.
+        rear_speed = max(0, min(255, speed))  # Constrain speed to 0-255 after trimming.
+        self._front_right.setSpeed(front_speed)
+        self._rear_right.setSpeed(rear_speed)
 
     def stop(self):
         """Stop all movement."""
-        self._left.run(Adafruit_MotorHAT.RELEASE)
-        self._right.run(Adafruit_MotorHAT.RELEASE)
+        for motor in self._motors:
+            motor.run(Adafruit_MotorHAT.RELEASE)
+
 
     def forward(self, speed, seconds=None):
         """Move forward at the specified speed (0-255).  Will start moving
@@ -61,10 +83,10 @@ class Robot(object):
         case the robot will move forward for that amount of time and then stop.
         """
         # Set motor speed and move both forward.
-        self._left_speed(speed)
         self._right_speed(speed)
-        self._left.run(Adafruit_MotorHAT.FORWARD)
-        self._right.run(Adafruit_MotorHAT.FORWARD)
+        self._left_speed(speed)
+        for motor in self._motors:
+            motor.run(Adafruit_MotorHAT.FORWARD)
         # If an amount of time is specified, move for that time and then stop.
         if seconds is not None:
             time.sleep(seconds)
@@ -76,10 +98,10 @@ class Robot(object):
         case the robot will move backward for that amount of time and then stop.
         """
         # Set motor speed and move both backward.
-        self._left_speed(speed)
         self._right_speed(speed)
-        self._left.run(Adafruit_MotorHAT.BACKWARD)
-        self._right.run(Adafruit_MotorHAT.BACKWARD)
+        self._left_speed(speed)
+        for motor in self._motors:
+            motor.run(Adafruit_MotorHAT.BACKWARD)
         # If an amount of time is specified, move for that time and then stop.
         if seconds is not None:
             time.sleep(seconds)
@@ -93,8 +115,10 @@ class Robot(object):
         # Set motor speed and move both forward.
         self._left_speed(speed)
         self._right_speed(speed)
-        self._left.run(Adafruit_MotorHAT.FORWARD)
-        self._right.run(Adafruit_MotorHAT.BACKWARD)
+        for motor in self._left_motors:
+            motor.run(Adafruit_MotorHAT.FORWARD)
+        for motor in self._right_motors:
+            motor.run(Adafruit_MotorHAT.BACKWARD)
         # If an amount of time is specified, move for that time and then stop.
         if seconds is not None:
             time.sleep(seconds)
@@ -108,8 +132,10 @@ class Robot(object):
         # Set motor speed and move both forward.
         self._left_speed(speed)
         self._right_speed(speed)
-        self._left.run(Adafruit_MotorHAT.BACKWARD)
-        self._right.run(Adafruit_MotorHAT.FORWARD)
+        for motor in self._left_motors:
+            motor.run(Adafruit_MotorHAT.BACKWARD)
+        for motor in self._right_motors:
+            motor.run(Adafruit_MotorHAT.FORWARD)
         # If an amount of time is specified, move for that time and then stop.
         if seconds is not None:
             time.sleep(seconds)
@@ -124,7 +150,7 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\nkeyboard interrupt")
             sys.exit()
-        except:
-            print("Couldn't go")
-            sys.exit()
+#        except:
+#            print("Couldn't go")
+#            sys.exit()
     sys.exit()  
