@@ -4,9 +4,13 @@ import time
 import atexit
 import sys
 
-class Motors(object):
-    def __init__(self, addr=0x60, front_left_id=1, front_right_id=2, front_left_trim=0, front_right_trim=0,
-                  rear_left_id=3, rear_right_id=4, rear_left_trim=0, rear_right_trim=0, stop_at_exit=True):
+class PibotMotors(object):
+    def __init__(self, addr=0x60, 
+                       front_left_id=1, front_right_id=2, 
+                       front_left_trim=0, front_right_trim=0,
+                       rear_left_id=3, rear_right_id=4, 
+                       rear_left_trim=0, rear_right_trim=0, 
+                       stop_at_exit=True):
 
         """Create an instance of the robot.  Can specify the following optional
         parameters:
@@ -27,6 +31,9 @@ class Motors(object):
                          exit.  Default is True (highly recommended to keep this
                          value to prevent damage to the bot on program crash!).
         """
+        # export some Adafruit consts in accessible form
+        self.FORWARD = Adafruit_MotorHAT.FORWARD
+        self.BACKWARD = Adafruit_MotorHAT.BACKWARD
         # Initialize motor HAT and left, right motor.
         self._mh = Adafruit_MotorHAT(addr)
         self._front_left = self._mh.getMotor(front_left_id)

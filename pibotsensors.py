@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 import threading
 from time import sleep, time
 
-class PibotSensors:
+class PibotSensors(object):
     def __init__(self):
         # initialise GPIO for corner sensoring
         self.frontLeftClear = None
